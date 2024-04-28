@@ -37,7 +37,8 @@ while True:
         buttonPressed = 0
 
     #Construct and send DIPPID-Message
-    message = '{"button_1": '+str(buttonPressed)+', "accelerometer": { "x": '+str(xWave)+', "y": '+str(yWave)+', "z": '+str(zWave)+' }}'
+    #message = '{"button_1": '+str(buttonPressed)+', "accelerometer": { "x": '+str(xWave)+', "y": '+str(yWave)+', "z": '+str(zWave)+' }}'
+    message = '{"button_1": '+str(buttonPressed)+', "gyroscope": { "x": '+str(xWave)+', "y": '+str(yWave)+', "z": '+str(zWave)+' }}'
     print(message)
     sock.sendto(message.encode(), (IP, PORT))
         
