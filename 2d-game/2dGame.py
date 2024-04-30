@@ -3,6 +3,7 @@ import os
 import pyglet
 from pyglet import shapes
 import numpy as np
+import random
 
 
 
@@ -16,13 +17,19 @@ config = pyglet.gl.Config(double_buffer=True, depth_size=24)
 window = pyglet.window.Window(windowSizeX, windowSizeY)
 current_dir = os.path.dirname(__file__)
 batch = pyglet.graphics.Batch()
-
+LevelSpeed = 10
+countDown = 40
+spawnEnemie = False
 inputX = 0
 inputY = 0
 moveX = 0
 moveY = 0
 bullets = []
 enemies = []
+backgrounds=[]
+doShoot = False
+
+levelCountdown = 300
 
 
 shootButtonPressed = False
@@ -49,9 +56,18 @@ class GameObject():
 class Player(GameObject): 
     def __init__(self):
         image_path = os.path.join(current_dir, 'images','redSquare.png')
-        image = pyglet.image.load(image_path)
-        self.sprite = pyglet.sprite.Sprite(img=image)
-        
+        #image = pyglet.image.load(image_path)
+        frames = []
+        for i in range(1,15):
+            imageName = "f"+str(i)+".png"            
+            image_p = os.path.join(current_dir,'images',imageName)
+            print(image_p)
+            frame = pyglet.image.load(image_p)
+            frames.append(frame)
+        animation = pyglet.image.Animation.from_image_sequence(frames, 1/15)
+        self.sprite = pyglet.sprite.Sprite(animation)
+        #self.sprite = pyglet.sprite.Sprite(img=image)
+        #self.sprite = pyglet.shapes.Box(300,300,64,64,color=(255,0,0),batch=batch)
         self.x = 300
         self.y = 300
         self.offsetX = self.sprite.width/2
@@ -59,6 +75,8 @@ class Player(GameObject):
          
     def update(self):
         super().update()
+        
+        
     #Set Sprite/Animation Sprites
     #update function moves and draws    
     print("not implemented")
@@ -76,23 +94,16 @@ class Bullet():
                
     def update(self):
         
-        print("Test2->")
-        
-        print(self.x)
-        print(self.y)
-        print(self.xSpeed)
-        print(self.ySpeed)
-        
-        print("<-Test2")
         self.x = self.x + self.xSpeed
         self.y = self.y + self.ySpeed
-        if self.x<0 or self.x>windowSizeX or self.y<0 or self.y>windowSizeY:
-            self.deleteSelf()
-    
-        self.sprite.x = self.x                
         self.sprite.y = self.y
-    def deleteSelf(self):
+
+        if self.y>windowSizeY:
+            self.deleteSelf()
+        pass
+    def __del__(self):
         if self in self.array:
+            self.sprite.delete()
             self.array.remove(self)
         
     #Movement is simple directional shift
@@ -106,7 +117,7 @@ class Enemy(GameObject):
         self.targetX = 0    
         self.targetY = 0
         self.despawnSizePadding = 300
-        
+        self.array = array
     def moveLogic(self):
         pass
     def move(self):
@@ -116,16 +127,12 @@ class Enemy(GameObject):
         self.moveLogic()
         self.move()
         
-    def deleteSelf(self):
+    def __del__(self):
         if self in self.array:
                 self.array.remove(self)
-
-
-
-
-
-
-    
+                self.sprite.delete()
+                
+                
 class ShootEnemy(Enemy):
     def __init__(self,x,y,array,speed, playerX, playerY):         
         super().__init__(x,y,array)
@@ -149,14 +156,16 @@ class ShootEnemy(Enemy):
             self.dx /=dxy
             self.dy /=dxy
     def move(self):
-        
+        if self.sprite is not None and self.sprite._vertex_list is not None:
 
-        self.x += self.dx*self.speed    
-        self.y += self.dy*self.speed
-        if self.x<0-self.despawnSizePadding or self.x>windowSizeX+self.despawnSizePadding or self.y<0-self.despawnSizePadding or self.y>windowSizeY+self.despawnSizePadding:
-            self.deleteSelf
-        self.sprite.x = self.x
-        self.sprite.y = self.y
+            self.x += self.dx*self.speed    
+            self.y += self.dy*self.speed
+            #if self.x<0-self.despawnSizePadding or self.x>windowSizeX+self.despawnSizePadding or self.y<0-self.despawnSizePadding or self.y>windowSizeY+self.despawnSizePadding:
+            self.sprite.x = self.x
+            self.sprite.y = self.y
+            if self.y < -10:
+                self.__del__()
+            
         
             
     #initialize with sprite
@@ -166,13 +175,40 @@ class ShootEnemy(Enemy):
     #this means different enemies only have to have different movement logic and sprites
     
 
-
-
+class backgroundImage():
+    def __init__(self,imageName,speed,y): 
+        image_path = os.path.join(current_dir, 'images',imageName)
+        image = pyglet.image.load(image_path)
+        self.sprite = pyglet.sprite.Sprite(img=image)
+        self.speed = speed
+        self.y = y
+    def update(self):
+        self.y -= self.speed
+        if(self.y < (-windowSizeY)):
+            self.y = windowSizeY
+        self.sprite.y = self.y
+        
 player = Player()
+backgrounds.append(backgroundImage("Background.png",LevelSpeed,704))
+backgrounds.append(backgroundImage("Background.png",LevelSpeed,0))
  
+ticker = 0;
     
 def update(dt):
     global player
+    global doShoot
+    global spawnEnemie
+    global levelCountdown
+    global LevelSpeed 
+#     ticker += 10
+    if doShoot == True:
+        bullets.append(Bullet(ticker,200,0,10,bullets))
+        doShoot = False
+    
+    if spawnEnemie == True:
+        enemies.append(ShootEnemy(random.randint(52, 652),800,enemies,LevelSpeed,player.x,player.y))
+        spawnEnemie = False
+    
     handleInput()
     handleMovement()
     
@@ -183,12 +219,20 @@ def update(dt):
     
     for e in enemies:
         e.update()
-        
+    for ba in backgrounds:
+        ba.update()        
 
-    #enemieSpawner()
-    #enemieBulletCollision()
-    #playerEnemyCollision()
+    enemieSpawner()
+    enemieBulletCollision()
+    playerEnemyCollision()
     
+    if levelCountdown <=0:
+        #LevelSpeed += 1
+        levelCountdown = 300
+        #for ba in backgrounds:
+        #    ba.speed = LevelSpeed
+    else:
+        levelCountdown -= 1
     
     #for the list of game objects execute update.
     #print("not implemented")
@@ -196,12 +240,21 @@ def update(dt):
 def enemieSpawner():
     #check if enemies should be spawned. can have multiple cooldowns at once.
     #Spawn enemies
-    print("not implemented")
+    global countDown
+    global spawnEnemie
+    if(countDown <= 0):
+        spawnEnemie = True
+        countDown = 30+ random.randint(0, 30)
+    else:
+        countDown -= 1
+        
         
 @window.event
 def on_draw():
     window.clear()
-    #draw background
+    drawBackground()
+
+    #batch.draw()
     drawProjectiles()
     drawPlayer()
     drawEnemies()
@@ -209,7 +262,8 @@ def on_draw():
     
 
 def drawBackground():
-    print("not implemented")
+    for ba in backgrounds:
+        ba.sprite.draw()   
 
 def drawProjectiles():
     for b in bullets:
@@ -222,7 +276,8 @@ def drawPlayer():
     
 def drawEnemies():
     for e in enemies:
-        e.sprite.draw()
+        if e.sprite != None:
+            e.sprite.draw()
 
 
 
@@ -272,17 +327,19 @@ def handleMovement():
     else:
         moveX = 0    
         
-    if inputY > inputThreshold:
-        moveY = 1
-    elif inputY < -inputThreshold:
-        moveY = -1
-    else:
-        moveY = 0
+    #if inputY > inputThreshold:
+    #    moveY = 1
+    #elif inputY < -inputThreshold:
+    #    moveY = -1
+    #else:
+    #    moveY = 0
     
     if player.x + player.offsetX + moveX *speed < windowSizeX and  player.x - player.offsetX + moveX *speed >0:       
         player.x += moveX *speed
-    if player.y + player.offsetY + moveY *speed < windowSizeY and  player.y - player.offsetY + moveY *speed >0:       
-        player.y += moveY *speed
+    else: player.x -= moveX
+        
+    #if player.y + player.offsetY + moveY *speed < windowSizeY and  player.y - player.offsetY + moveY *speed >0:       
+    #    player.y += moveY *speed
  
         
         
@@ -301,7 +358,7 @@ def handleMovement():
 
 def shootInput(data):
     global canShoot
-    
+    print(data)
     if int(data) == 1:
         #wants to shoot
         if canShoot == True:
@@ -309,51 +366,62 @@ def shootInput(data):
             shoot()
     else:
         if canShoot == False:
-            canSHoot = True    
+            canShoot = True    
         
     
 def shoot():
     #calculate shot direction.
     global moveX
     global moveY
+   # global bullets
+    global canShoot
+    global ticker
+    global doShoot
+    
+    print(canShoot)
     xdir= 0
     ydir= 0
     speed = 10
     
     
-    if moveX >0:
-        xdir= 1 
-    elif moveX <0:
-        xdir= -1
+        
+    #print("test->")     
+    #print(xdir)     
+    #print(ydir)
+    #print("<-test")
+    #xSpeed = xdir*speed
+    #ySpeed = ydir*speed
+    #bullets.append(Bullet(player.x,player.y,xSpeed,ySpeed,bullets))
     
-    if moveY >0:
-        ydir= 1
-    elif moveY <0:
-        ydir= -1
+    doShoot = True
+    #bullets.append(Bullet(len(bullets)*30,10,0,10,bullets))             
+    canShoot = False
     
-    if xdir != 0 and ydir != 0:
-        speed = speed *0.7071
-    if xdir == 0 and ydir == 0:
-       ydir = 1
-            
-    print("test->")     
-    print(xdir)     
-    print(ydir)
-    print("<-test")
-    xSpeed = xdir*speed
-    ySpeed = ydir*speed
-    bullets.append(Bullet(player.x,player.y,xSpeed,ySpeed,bullets))        
-         
+
+
     #spawn bullet
     #apply offset according to which direction player faces. But there Where the lines of fire directions intersect should be where Enemies target, to make Shooting easier
     #set can shoot to false
     
     print("not implemented")
 
-bullets.append(Bullet(player.x,player.y,5,5,bullets))        
-bullets.append(Bullet(player.x,player.y,10,0,bullets))
 
-enemies.append(ShootEnemy(50,50,enemies,10,player.x,player.y))
+#for i in range(300):
+#        bullets.append(Bullet(player.x,player.y,0,10,bullets))        
+    
+#bullets.append(Bullet(10,player.y,0,10,bullets))
+
+#bullets.append(Bullet(20,player.y,0,10,bullets))
+
+#bullets.append(Bullet(30,player.y,0,10,bullets))
+
+#bullets.append(Bullet(40,player.y,0,10,bullets))
+
+#bullets.append(Bullet(50,player.y,0,10,bullets))
+
+#bullets.append(Bullet(60,player.y,0,10,bullets))
+     
+#enemies.append(ShootEnemy(100,500,enemies,10,player.x,player.y))
 
 def checkCollision():
     #gets two lists of objects
@@ -374,15 +442,15 @@ def enemieBulletCollision():
         matchedEnemy = None
         matchD = minimumDistance
         for e in enemies:
-            #check distance           
+            #check distance     
             dx = b.x -e.x
             dy = b.y -e.y
             distance = np.sqrt(dx**2 + dy**2)
             if distance < minimumDistance and distance < matchD:
                 matchedEnemy = e
         if matchedEnemy != None:
-            e.deleteSelf()
-            b.deleteSelf()
+            e.__del__()
+            b.__del__()
             
 def playerEnemyCollision():
     minimumDistance = 32
@@ -391,13 +459,15 @@ def playerEnemyCollision():
         dy = player.y - e.y
         distance = np.sqrt(dx**2 + dy**2)
         if distance < minimumDistance:
-            window.close 
+            pass
+#            window.close() 
     #Transmits list of player and Enemies
     #checkCollision()
     #print("not implemented")
     
     
     
+
     
 sensor.register_callback('button_1', shootInput)    
 pyglet.clock.schedule_interval(update, 1/30.0)
@@ -408,20 +478,18 @@ pyglet.app.run()
 #TODO
 
         
-#Collision enemie player
-#Collision shots enemies
-
-
-#Can only move side to side and shoot up. Maybe bullet hell but running
 
 
 
-#Add Animation
-#Draw Level
-#Make Bullet speed calculation better
+
+#fix stuck
+#Can only move side to side and shoot up. Maybe bullet hell but running TEST
+#Add Shadow for player
+#fix overlap issiue
+
+
 #add enemy following player
 #add enemy zig zag
-
 
 #Cleanup code
 #Add comments
@@ -431,6 +499,10 @@ pyglet.app.run()
 
 
 #DONE
+#Add Animation DONE
+#Draw Level DONE
+#background can loop and if one background is out of framenext one jumps up DONE
+#Make Bullet speed calculation better DONE
 #https://pyglet.readthedocs.io/en/latest/programming_guide/examplegame.html#basic-graphics
 #Correct inport of Resources DONE
 #Handle input DONE
@@ -442,6 +514,8 @@ pyglet.app.run()
     #Bullet Distruction DONE
     #Bullet list DONE
     #Update Bullet list DONE
+#Collision enemie player DONE
+#Collision shots enemies DONE
 
 #Create Enemies DONE
     #Test enemy 1 DONE
