@@ -341,6 +341,7 @@ def enemyBulletCollision():
             distance = (b.x-e.x)**2 + (b.y-e.y)**2
             
             if distance <= minimum_distance_bullet_hit**2:
+                point_counter += 200
                 e.__del__()
                 b.__del__()
                 break
@@ -425,66 +426,3 @@ pyglet.clock.schedule_interval(update, 1/30.0)
 
 #Start Game    
 pyglet.app.run()
-
-
-
-
-
-
-
-#TODO
-
-        
-
-
-
-
-#fix stuck
-#Can only move side to side and shoot up. Maybe bullet hell but running TEST
-#Add Shadow for player
-#fix overlap issiue DONE
-#Straight down enemie
-
-
-#Cleanup code
-#Add comments
-#PEP8 complient
-#LowerSleepTime -> les debugable but more realistic
-#virtual environment and a requirements.txt
-
-
-#DONE
-#Add Animation DONE
-#Draw Level DONE
-#background can loop and if one background is out of framenext one jumps up DONE
-#Make Bullet speed calculation better DONE
-#https://pyglet.readthedocs.io/en/latest/programming_guide/examplegame.html#basic-graphics
-#Correct inport of Resources DONE
-#Handle input DONE
-#Create Movement DONE
-#collision with wall DONE
-#Shooting DONE
-    #Bullet sprite DONE
-    #Bullet Movement DONE
-    #Bullet Distruction DONE
-    #Bullet list DONE
-    #Update Bullet list DONE
-#Collision enemie player DONE
-#Collision shots enemies DONE
-
-#Create Enemies DONE
-    #Test enemy 1 DONE
-    #enemy list DONE
-
-
-#Ein shooter?
-    #Tilt to move.
-    #Avoid enemies
-    #Shoot enemies
-    #Mit lauf animation
-    
-
-#Welche spiele würden sich gut eignen?
-#Space invaders?
-#Tetris
-#Snake?
