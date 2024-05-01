@@ -184,7 +184,15 @@ class ShootEnemy(Enemy):
                 self.__del__()
             
     
-    
+
+#looping background music.
+music_p = os.path.join(current_dir,'music','1.mp3')
+music = pyglet.media.load(music_p)
+music_player = pyglet.media.Player()
+music_player.queue(music)
+music_player.loop = True
+
+
 #The looping background image.
 class BackgroundImage():
     def __init__(self,imageName,speed,y): 
@@ -417,6 +425,9 @@ def drawEnemies():
         if e.sprite != None:
             e.sprite.draw()
 
+
+#start the music
+music_player.play()
 
 #register button1 event handler
 sensor.register_callback('button_1', shootInput)    
